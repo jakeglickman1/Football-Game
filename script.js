@@ -23,6 +23,8 @@ const homeSimButton = document.getElementById("home-sim-button");
 const rosterListEl = document.getElementById("roster-list");
 const rosterSelectEl = document.getElementById("roster-select");
 const draftPicksDisplayEl = document.getElementById("draft-picks-display");
+const draftBoardEl = document.getElementById("draft-board");
+const draftRefreshButton = document.getElementById("draft-refresh-button");
 const signPlayerButton = document.getElementById("sign-player");
 const releasePlayerButton = document.getElementById("release-player");
 const tradePlayerButton = document.getElementById("trade-player");
@@ -78,6 +80,7 @@ const CPU_DRIVE_BASE_TD = 0.42;
 const CPU_DRIVE_BASE_FG = 0.3;
 const CPU_DRIVE_ANIMATION_DURATION = 2.4;
 const BASE_DRAFT_PICKS = { 1: 1, 2: 1, 3: 1 };
+const DRAFT_BOARD_SLOTS_PER_ROUND = 3;
 const ROSTER_MIN_SIZE = 5;
 const ROSTER_MAX_SIZE = 12;
 const INITIAL_ROSTER_POSITIONS = ["QB", "RB", "WR1", "WR2", "WR3", "TE", "LB", "CB"];
@@ -119,6 +122,159 @@ const LAST_NAMES = [
   "Monroe",
   "Whitaker",
 ];
+
+const PLAYER_STAT_LABELS = {
+  passPower: "Pass Power",
+  passAccuracy: "Pass Accuracy",
+  speed: "Speed",
+  agility: "Agility",
+  catching: "Catching",
+  strength: "Strength",
+  awareness: "Awareness",
+  tackling: "Tackling",
+  coverage: "Coverage",
+};
+
+const POSITION_STAT_FOCUS = {
+  QB: ["passPower", "passAccuracy", "speed", "awareness"],
+  RB: ["speed", "agility", "strength", "catching"],
+  WR1: ["speed", "catching", "agility", "awareness"],
+  WR2: ["speed", "catching", "agility", "awareness"],
+  WR3: ["speed", "catching", "agility", "awareness"],
+  TE: ["strength", "catching", "speed", "awareness"],
+  LB: ["tackling", "strength", "speed", "awareness"],
+  CB: ["coverage", "speed", "agility", "awareness"],
+  DL: ["strength", "tackling", "speed", "awareness"],
+  S: ["coverage", "speed", "tackling", "awareness"],
+};
+
+const POSITION_ATTRIBUTE_TEMPLATES = {
+  default: {
+    passPower: [35, 55],
+    passAccuracy: [35, 60],
+    speed: [48, 82],
+    agility: [50, 84],
+    catching: [45, 78],
+    strength: [48, 82],
+    awareness: [45, 82],
+    tackling: [45, 78],
+    coverage: [45, 78],
+  },
+  QB: {
+    passPower: [60, 97],
+    passAccuracy: [58, 96],
+    speed: [50, 78],
+    agility: [48, 76],
+    catching: [35, 60],
+    strength: [50, 78],
+    awareness: [60, 96],
+    tackling: [35, 60],
+    coverage: [35, 55],
+  },
+  RB: {
+    passPower: [32, 48],
+    passAccuracy: [32, 52],
+    speed: [62, 96],
+    agility: [62, 96],
+    catching: [48, 84],
+    strength: [55, 88],
+    awareness: [52, 86],
+    tackling: [48, 78],
+    coverage: [40, 65],
+  },
+  WR1: {
+    passPower: [34, 50],
+    passAccuracy: [34, 52],
+    speed: [68, 98],
+    agility: [65, 95],
+    catching: [62, 95],
+    strength: [48, 78],
+    awareness: [55, 86],
+    tackling: [40, 70],
+    coverage: [48, 78],
+  },
+  WR2: {
+    passPower: [34, 50],
+    passAccuracy: [34, 52],
+    speed: [64, 94],
+    agility: [62, 92],
+    catching: [60, 92],
+    strength: [48, 80],
+    awareness: [54, 84],
+    tackling: [40, 68],
+    coverage: [46, 76],
+  },
+  WR3: {
+    passPower: [32, 48],
+    passAccuracy: [32, 50],
+    speed: [60, 90],
+    agility: [60, 90],
+    catching: [58, 88],
+    strength: [45, 76],
+    awareness: [52, 82],
+    tackling: [40, 64],
+    coverage: [44, 72],
+  },
+  TE: {
+    passPower: [38, 55],
+    passAccuracy: [38, 55],
+    speed: [56, 82],
+    agility: [54, 80],
+    catching: [58, 88],
+    strength: [60, 92],
+    awareness: [56, 86],
+    tackling: [50, 80],
+    coverage: [46, 74],
+  },
+  LB: {
+    passPower: [35, 50],
+    passAccuracy: [35, 52],
+    speed: [56, 86],
+    agility: [54, 82],
+    catching: [48, 74],
+    strength: [62, 94],
+    awareness: [56, 88],
+    tackling: [64, 96],
+    coverage: [54, 84],
+  },
+  CB: {
+    passPower: [32, 48],
+    passAccuracy: [34, 54],
+    speed: [64, 96],
+    agility: [66, 96],
+    catching: [50, 82],
+    strength: [48, 74],
+    awareness: [58, 88],
+    tackling: [50, 80],
+    coverage: [66, 98],
+  },
+  DL: {
+    passPower: [35, 55],
+    passAccuracy: [35, 55],
+    speed: [52, 78],
+    agility: [50, 76],
+    catching: [40, 65],
+    strength: [66, 98],
+    awareness: [54, 84],
+    tackling: [66, 98],
+    coverage: [46, 72],
+  },
+  S: {
+    passPower: [34, 52],
+    passAccuracy: [36, 56],
+    speed: [62, 94],
+    agility: [64, 94],
+    catching: [54, 84],
+    strength: [52, 80],
+    awareness: [60, 92],
+    tackling: [60, 90],
+    coverage: [64, 96],
+  },
+};
+
+const PORTRAIT_SKIN_TONES = ["#f9d0b1", "#f4b98f", "#e09a6d", "#c47a4a", "#9f5c2b", "#7b3f16"];
+const PORTRAIT_ACCENTS = ["#ff9c63", "#ffda63", "#ffa3d6", "#9de3ff", "#a090ff", "#6ef3a5"];
+const DEFAULT_QB_ACCURACY_SPREAD = 16;
 
 let fieldSize = getFieldSize();
 
@@ -175,6 +331,12 @@ const state = {
     visible: false,
     busy: false,
     pendingMessage: "",
+    selectedProspectId: null,
+  },
+  draftBoard: [],
+  qbModifiers: {
+    power: 1,
+    accuracySpread: DEFAULT_QB_ACCURACY_SPREAD,
   },
   awaitingSnap: false,
 };
@@ -246,6 +408,8 @@ function createPlayers() {
     const receiver = createPlayer(preset.label, "offense", "receiver");
     receiver.speed = preset.speed;
     receiver.baseSpeed = preset.speed;
+    receiver.catchRadius = 18;
+    receiver.baseCatchRadius = 18;
     receiver.preset = preset;
     receiver.routeColor = preset.color;
     return receiver;
@@ -339,9 +503,217 @@ function getPositionRatingRange(position) {
   return POSITION_RATING_RANGE[position] || [2, 4];
 }
 
+function mapStatToRange(statValue, min, max, invert = false) {
+  const clamped = clamp(statValue ?? 60, 35, 99);
+  const ratio = clamp((clamped - 40) / 55, 0, 1);
+  if (invert) {
+    return max - (max - min) * ratio;
+  }
+  return min + (max - min) * ratio;
+}
+
+function mapStatToMultiplier(statValue, min = 0.85, max = 1.25) {
+  return mapStatToRange(statValue, min, max);
+}
+
+function rollAttributeValue(range, rating) {
+  const [min, max] = range || [40, 80];
+  const ratingRatio = clamp((rating - 1) / 4, 0, 1);
+  const base = min + (max - min) * ratingRatio;
+  const variance = randomInRange(-6, 6);
+  const raw = base + variance;
+  return clamp(Math.round(raw), Math.min(min, max) - 5, Math.max(min, max));
+}
+
+function generateAttributesForPosition(position, rating) {
+  const template = POSITION_ATTRIBUTE_TEMPLATES[position] || POSITION_ATTRIBUTE_TEMPLATES.default;
+  const stats = {};
+  Object.keys(POSITION_ATTRIBUTE_TEMPLATES.default).forEach((key) => {
+    const range = template[key] || POSITION_ATTRIBUTE_TEMPLATES.default[key];
+    stats[key] = rollAttributeValue(range, rating);
+  });
+  return stats;
+}
+
+function getPositionDisplayStats(position) {
+  return POSITION_STAT_FOCUS[position] || ["speed", "agility", "strength", "awareness"];
+}
+
+function getPlayerDisplayStats(player, limit = 4) {
+  if (!player?.stats) {
+    return [];
+  }
+  const focus = getPositionDisplayStats(player.position);
+  const stats = [];
+  focus.forEach((key) => {
+    if (stats.length >= limit) {
+      return;
+    }
+    const label = PLAYER_STAT_LABELS[key] || key;
+    const value = player.stats[key];
+    if (typeof value === "number") {
+      stats.push({ key, label, value });
+    }
+  });
+  return stats;
+}
+
+function createPortraitSeed(position) {
+  return {
+    hue: Math.floor(Math.random() * 360),
+    accent: randomItem(PORTRAIT_ACCENTS),
+    tone: randomItem(PORTRAIT_SKIN_TONES),
+    pattern: Math.random() > 0.5 ? "diag" : "rings",
+    position,
+  };
+}
+
+function svgToDataUrl(svg) {
+  const encoded = encodeURIComponent(svg)
+    .replace(/'/g, "%27")
+    .replace(/"/g, "%22");
+  return `data:image/svg+xml,${encoded}`;
+}
+
+function generatePortraitDataUrl(seed) {
+  if (!seed) {
+    return "";
+  }
+  const jerseyHue = seed.hue;
+  const accent = seed.accent || "#ff9c63";
+  const tone = seed.tone || "#f9d0b1";
+  const bg = `hsl(${jerseyHue}, 65%, 30%)`;
+  const patternColor = `hsl(${(jerseyHue + 40) % 360}, 70%, 45%)`;
+  const stroke = seed.pattern === "diag" ? patternColor : accent;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 200">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${bg}"/>
+        <stop offset="100%" stop-color="${patternColor}"/>
+      </linearGradient>
+    </defs>
+    <rect width="160" height="200" rx="18" ry="18" fill="url(#bg)"/>
+    ${
+      seed.pattern === "rings"
+        ? '<circle cx="80" cy="40" r="50" fill="none" stroke="' +
+          stroke +
+          '" stroke-width="8" opacity="0.35"/><circle cx="20" cy="150" r="35" fill="none" stroke="' +
+          stroke +
+          '" stroke-width="6" opacity="0.35"/>'
+        : '<path d="M-20 40 L60 -20 M60 220 L-20 140 M120 -20 L200 60 M120 220 L200 140" stroke="' +
+          stroke +
+          `" stroke-width="14" opacity="0.3"/>`
+    }
+    <circle cx="80" cy="70" r="32" fill="${tone}" stroke="#1b0c05" stroke-width="4"/>
+    <rect x="45" y="100" width="70" height="70" rx="18" fill="${accent}" stroke="#020203" stroke-width="4"/>
+    <rect x="55" y="122" width="50" height="60" rx="14" fill="${accent}" opacity="0.9"/>
+    <rect x="40" y="120" width="20" height="50" rx="12" fill="${accent}" opacity="0.85"/>
+    <rect x="100" y="120" width="20" height="50" rx="12" fill="${accent}" opacity="0.85"/>
+  </svg>`;
+  return svgToDataUrl(svg);
+}
+
+function renderPlayerCard(player, options = {}) {
+  if (!player) {
+    return "";
+  }
+  const stats = getPlayerDisplayStats(player);
+  const ratingStars = formatRatingStars(player.rating);
+  const classes = ["player-card"];
+  if (options.mode === "draft") {
+    classes.push("draft-card");
+  } else {
+    classes.push("roster-card");
+  }
+  const projectionLabel =
+    options.mode === "draft" && typeof player.roundProjection === "number"
+      ? `<span class="player-card-projection">Proj R${player.roundProjection}</span>`
+      : "";
+  const cardStats =
+    stats.length > 0
+      ? stats
+          .map(
+            (stat) =>
+              `<div class="stat-line"><span>${stat.label}</span><strong>${stat.value}</strong></div>`
+          )
+          .join("")
+      : '<div class="stat-line"><span>Rating</span><strong>--</strong></div>';
+  let actionMarkup = "";
+  if (options.mode === "draft") {
+    const canDraft = options.canDraft && options.draftRound;
+    const buttonLabel = canDraft
+      ? `Draft (R${options.draftRound})`
+      : "Need Pick";
+    actionMarkup = `<button class="draft-card-button" data-action="draft" data-player-id="${player.id}" data-round-projection="${player.roundProjection || ""}" data-pick-round="${options.draftRound || ""}" ${canDraft ? "" : "disabled"}>${buttonLabel}</button>`;
+  }
+  return `
+    <div class="${classes.join(" ")}" data-player-id="${player.id}">
+      <div class="player-card-media">
+        <img src="${player.portrait || ""}" alt="${player.name} portrait" loading="lazy" />
+        <span class="player-card-position">${player.position}</span>
+        ${projectionLabel}
+      </div>
+      <div class="player-card-body">
+        <div class="player-card-name">${player.name}</div>
+        <div class="player-card-rating">
+          <span class="stars">${ratingStars}</span>
+          <span class="numeric">${player.rating}★</span>
+        </div>
+        <div class="player-card-stats">
+          ${cardStats}
+        </div>
+        ${actionMarkup}
+      </div>
+    </div>
+  `;
+}
+
 function formatRatingStars(rating) {
   const rounded = clamp(Math.round(rating), 1, 5);
   return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+}
+
+function updateQuarterbackThrowModifiers(stats) {
+  if (!stats) {
+    state.qbModifiers.power = 1;
+    state.qbModifiers.accuracySpread = DEFAULT_QB_ACCURACY_SPREAD;
+    return;
+  }
+  state.qbModifiers.power = mapStatToMultiplier(stats.passPower ?? 60, 0.9, 1.3);
+  state.qbModifiers.accuracySpread = mapStatToRange(stats.passAccuracy ?? 60, 5, 22, true);
+}
+
+function applyPlayerAttributeEffects(player) {
+  if (!player) {
+    return;
+  }
+  const stats = player.rosterProfile?.stats || null;
+  if (!stats) {
+    player.speed = player.baseSpeed;
+    if (player.role === "receiver") {
+      player.catchRadius = player.baseCatchRadius || 18;
+    }
+    if (player.role === "qb") {
+      updateQuarterbackThrowModifiers(null);
+    }
+    return;
+  }
+  if (typeof stats.speed === "number") {
+    player.speed = player.baseSpeed * mapStatToMultiplier(stats.speed, 0.85, 1.35);
+  } else {
+    player.speed = player.baseSpeed;
+  }
+  if (player.role === "receiver") {
+    const hands = stats.catching ?? 60;
+    const agility = stats.agility ?? 60;
+    const boost = mapStatToMultiplier((hands + agility) / 2, 0.85, 1.4);
+    player.catchRadius = (player.baseCatchRadius || 18) * boost;
+  }
+  if (player.role === "qb") {
+    const mobility = stats.speed ?? 60;
+    player.speed = player.baseSpeed * mapStatToMultiplier(mobility, 0.9, 1.3);
+    updateQuarterbackThrowModifiers(stats);
+  }
 }
 
 function assignFieldPlayerLabel(player, rosterEntry) {
@@ -358,17 +730,25 @@ function assignFieldPlayerLabel(player, rosterEntry) {
     player.labelElement.removeAttribute("title");
     player.rosterProfile = null;
   }
+  applyPlayerAttributeEffects(player);
 }
 
 function generatePlayer(options = {}) {
   const position = options.position || randomItem(Object.keys(POSITION_RATING_RANGE));
   const [minRating, maxRating] = options.ratingRange || getPositionRatingRange(position);
   const rating = clamp(Math.round(randomInRange(minRating, maxRating)), 1, 5);
+  const stats = generateAttributesForPosition(position, rating);
+  const portraitSeed = createPortraitSeed(position);
+  const portrait = generatePortraitDataUrl(portraitSeed);
   return {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
     name: `${randomItem(FIRST_NAMES)} ${randomItem(LAST_NAMES)}`,
     position,
     rating,
+    stats,
+    portrait,
+    portraitSeed,
+    roundProjection: options.roundProjection || null,
   };
 }
 
@@ -415,6 +795,183 @@ function getTradeRoundForRating(rating) {
   return 3;
 }
 
+function createDraftProspects(roundSlots = DRAFT_BOARD_SLOTS_PER_ROUND) {
+  const prospects = [];
+  const positions = Object.keys(POSITION_RATING_RANGE);
+  [1, 2, 3].forEach((round) => {
+    for (let i = 0; i < roundSlots; i += 1) {
+      const position = randomItem(positions);
+      const ratingRange = getDraftRatingRange(round);
+      const prospect = generatePlayer({
+        position,
+        ratingRange,
+        roundProjection: round,
+      });
+      prospects.push(prospect);
+    }
+  });
+  return prospects;
+}
+
+function ensureDraftBoard(franchise) {
+  if (!franchise) {
+    return [];
+  }
+  if (!Array.isArray(franchise.draftBoard) || franchise.draftBoard.length === 0) {
+    franchise.draftBoard = createDraftProspects();
+  }
+  state.draftBoard = franchise.draftBoard;
+  return franchise.draftBoard;
+}
+
+function findPickRoundForProspect(franchise, projection) {
+  if (!franchise) {
+    return null;
+  }
+  const picks = ensureDraftPicks(franchise);
+  const projected = clamp(projection || 3, 1, 3);
+  for (let round = projected; round >= 1; round -= 1) {
+    if ((picks[round] || 0) > 0) {
+      return round;
+    }
+  }
+  return null;
+}
+
+function spendDraftPick(franchise, round) {
+  if (!franchise) {
+    return false;
+  }
+  const picks = ensureDraftPicks(franchise);
+  if (!picks[round] || picks[round] <= 0) {
+    return false;
+  }
+  picks[round] -= 1;
+  return true;
+}
+
+function removeProspectFromBoard(franchise, playerId) {
+  if (!franchise || !Array.isArray(franchise.draftBoard)) {
+    return null;
+  }
+  const index = franchise.draftBoard.findIndex((prospect) => prospect.id === playerId);
+  if (index === -1) {
+    return null;
+  }
+  const [removed] = franchise.draftBoard.splice(index, 1);
+  state.draftBoard = franchise.draftBoard;
+  return removed;
+}
+
+function renderDraftBoard(message) {
+  if (!draftBoardEl) {
+    return;
+  }
+  const franchise = state.franchise;
+  if (!franchise) {
+    draftBoardEl.innerHTML =
+      '<div class="draft-empty">Start a new season to scout prospects.</div>';
+    return;
+  }
+  const board = ensureDraftBoard(franchise);
+  if (board.length === 0) {
+    draftBoardEl.innerHTML =
+      '<div class="draft-empty">No prospects available right now. Hit \"New Prospects\" to refresh.</div>';
+    return;
+  }
+  draftBoardEl.innerHTML = board
+    .map((prospect) => {
+      const availableRound = findPickRoundForProspect(franchise, prospect.roundProjection);
+      return renderPlayerCard(prospect, {
+        mode: "draft",
+        canDraft: Boolean(availableRound),
+        draftRound: availableRound,
+      });
+    })
+    .join("");
+  highlightSelectedDraftCard();
+  if (message) {
+    setHomeScreenMessage(message);
+  }
+}
+
+function refreshDraftBoard(message) {
+  const franchise = state.franchise;
+  if (!franchise) {
+    return;
+  }
+  franchise.draftBoard = createDraftProspects();
+  state.draftBoard = franchise.draftBoard;
+  state.homeScreen.selectedProspectId = null;
+  renderDraftBoard(message);
+}
+
+function highlightSelectedDraftCard() {
+  if (!draftBoardEl) {
+    return;
+  }
+  const selectedId = state.homeScreen.selectedProspectId;
+  const cards = draftBoardEl.querySelectorAll(".player-card");
+  cards.forEach((card) => {
+    const cardId = card.getAttribute("data-player-id");
+    const isSelected = Boolean(selectedId && cardId === selectedId);
+    card.classList.toggle("selected", isSelected);
+  });
+}
+
+function selectDraftProspect(playerId) {
+  if (!state.franchise) {
+    state.homeScreen.selectedProspectId = null;
+    highlightSelectedDraftCard();
+    return;
+  }
+  const board = ensureDraftBoard(state.franchise);
+  const exists = board.some((prospect) => prospect.id === playerId);
+  state.homeScreen.selectedProspectId = exists ? playerId : null;
+  highlightSelectedDraftCard();
+}
+
+function clearSelectedProspectIfMatch(playerId) {
+  if (state.homeScreen.selectedProspectId === playerId) {
+    state.homeScreen.selectedProspectId = null;
+    highlightSelectedDraftCard();
+  }
+}
+
+function draftProspect(playerId) {
+  const franchise = state.franchise;
+  if (!franchise || !playerId) {
+    return false;
+  }
+  const roster = franchise.roster || [];
+  if (roster.length >= ROSTER_MAX_SIZE) {
+    setHomeScreenMessage("Roster full. Make space before drafting.");
+    return false;
+  }
+  const board = ensureDraftBoard(franchise);
+  const prospect = board.find((player) => player.id === playerId);
+  if (!prospect) {
+    setHomeScreenMessage("Prospect not found. Refresh the board.");
+    return false;
+  }
+  const pickRound = findPickRoundForProspect(franchise, prospect.roundProjection);
+  if (!pickRound) {
+    setHomeScreenMessage("No draft picks available for that prospect.");
+    return false;
+  }
+  if (!spendDraftPick(franchise, pickRound)) {
+    setHomeScreenMessage("Unable to spend pick right now.");
+    return false;
+  }
+  removeProspectFromBoard(franchise, playerId);
+  roster.push(prospect);
+  updateRosterUI();
+  updateDraftPicksDisplay();
+  clearSelectedProspectIfMatch(playerId);
+  renderDraftBoard(`Drafted ${prospect.name} with a round ${pickRound} pick.`);
+  return true;
+}
+
 function runSeasonDraft(franchise) {
   if (!franchise) {
     return [];
@@ -422,7 +979,7 @@ function runSeasonDraft(franchise) {
   const picks = ensureDraftPicks(franchise);
   const summary = [];
   [1, 2, 3].forEach((round) => {
-    const pickCount = Math.max(picks[round] || 0, 1);
+    const pickCount = Math.max(picks[round] || 0, 0);
     for (let i = 0; i < pickCount; i += 1) {
       const rookie = generatePlayer({ ratingRange: getDraftRatingRange(round) });
       franchise.roster.push(rookie);
@@ -660,17 +1217,9 @@ function updateRosterUI() {
   const roster = state.franchise?.roster || [];
   if (rosterListEl) {
     if (roster.length === 0) {
-      rosterListEl.innerHTML = '<div class="roster-entry">No players signed yet.</div>';
+      rosterListEl.innerHTML = '<div class="roster-empty">No players signed yet.</div>';
     } else {
-      rosterListEl.innerHTML = roster
-        .map(
-          (player) => `
-            <div class="roster-entry">
-              <div><strong>${player.position}</strong> ${player.name}</div>
-              <div class="rating-stars">${formatRatingStars(player.rating)}</div>
-            </div>`
-        )
-        .join("");
+      rosterListEl.innerHTML = roster.map((player) => renderPlayerCard(player, { mode: "roster" })).join("");
     }
   }
   if (rosterSelectEl) {
@@ -719,6 +1268,7 @@ function updateHomeScreenPanel(message) {
     setHomeScreenMessage(message);
   }
   updateRosterUI();
+  renderDraftBoard();
 }
 
 function showHomeScreen(message) {
@@ -728,6 +1278,9 @@ function showHomeScreen(message) {
   const displayMessage = message ?? state.homeScreen.pendingMessage;
   state.homeScreen.pendingMessage = "";
   updateHomeScreenPanel(displayMessage);
+  ensureDraftBoard(state.franchise);
+  state.homeScreen.selectedProspectId = null;
+  renderDraftBoard();
   homeScreenEl.classList.remove("hidden");
   state.homeScreen.visible = true;
   setHomeScreenBusy(false);
@@ -751,6 +1304,9 @@ function setHomeScreenBusy(isBusy) {
   }
   if (homeSimButton) {
     homeSimButton.disabled = isBusy;
+  }
+  if (draftRefreshButton) {
+    draftRefreshButton.disabled = isBusy;
   }
   if (signPlayerButton) {
     signPlayerButton.disabled = isBusy;
@@ -816,6 +1372,24 @@ function signRandomPlayer() {
   roster.push(newPlayer);
   updateRosterUI();
   setHomeScreenMessage(`Signed ${newPlayer.name} (${newPlayer.position})`);
+}
+
+function attemptDraftSelectedProspect() {
+  const selectedId = state.homeScreen.selectedProspectId;
+  if (!selectedId) {
+    return false;
+  }
+  const success = draftProspect(selectedId);
+  if (!success) {
+    // If drafting failed, keep selection only if prospect still exists (e.g., roster full handled elsewhere)
+    const board = state.franchise ? ensureDraftBoard(state.franchise) : [];
+    const stillExists = board.some((player) => player.id === selectedId);
+    if (!stillExists) {
+      state.homeScreen.selectedProspectId = null;
+      highlightSelectedDraftCard();
+    }
+  }
+  return success;
 }
 
 function releaseSelectedPlayer() {
@@ -1155,7 +1729,9 @@ function beginSeason(seasonNumber, trophies, carryover = {}) {
     opponent: null,
     roster,
     draftPicks,
+    draftBoard: createDraftProspects(),
   };
+  state.draftBoard = state.franchise.draftBoard;
   applyRosterToPlayers();
   pickNextOpponent();
   showHomeScreen();
@@ -1224,9 +1800,12 @@ function attemptPass(powerRatio = 0.5) {
   }
   hideRoutePreview();
   const normalizedPower = clamp(powerRatio, 0, 1);
+  const accuracySpread = state.qbModifiers?.accuracySpread ?? DEFAULT_QB_ACCURACY_SPREAD;
+  const jitterX = randomInRange(-accuracySpread, accuracySpread);
+  const jitterY = randomInRange(-accuracySpread, accuracySpread);
   const passTarget = {
-    x: clamp(state.pointer.x, FIELD_PADDING, fieldSize.width - FIELD_PADDING),
-    y: clamp(state.pointer.y, FIELD_PADDING, fieldSize.height - FIELD_PADDING),
+    x: clamp(state.pointer.x + jitterX, FIELD_PADDING, fieldSize.width - FIELD_PADDING),
+    y: clamp(state.pointer.y + jitterY, FIELD_PADDING, fieldSize.height - FIELD_PADDING),
   };
   state.ball.targetPoint = passTarget;
   state.ball.inFlight = true;
@@ -1235,9 +1814,10 @@ function attemptPass(powerRatio = 0.5) {
   const dx = passTarget.x - state.players.qb.x;
   const dy = passTarget.y - state.players.qb.y;
   const horizontalDistance = Math.hypot(dx, dy) || 1;
+  const powerMultiplier = state.qbModifiers?.power ?? 1;
   const baseHorizontalSpeed =
-    THROW_MIN_SPEED + (THROW_MAX_SPEED - THROW_MIN_SPEED) * normalizedPower;
-  const duration = clamp(horizontalDistance / baseHorizontalSpeed, 0.85, 1.45);
+    (THROW_MIN_SPEED + (THROW_MAX_SPEED - THROW_MIN_SPEED) * normalizedPower) * powerMultiplier;
+  const duration = clamp(horizontalDistance / baseHorizontalSpeed, 0.75, 1.45);
   state.ball.flightDuration = duration;
   state.ball.z = 10;
   state.ball.vx = dx / duration;
@@ -1412,7 +1992,6 @@ function attemptOffensiveCatch() {
   if (!state.ball.inFlight) {
     return;
   }
-  const effectiveRadius = state.ball.z > 10 ? 45 : 18;
   const planeDistance = (player) => Math.hypot(player.x - state.ball.x, player.y - state.ball.y);
 
   const eligible = state.players.receivers.slice().sort((a, b) => {
@@ -1430,7 +2009,9 @@ function attemptOffensiveCatch() {
   });
 
   for (const receiver of eligible) {
-    if (planeDistance(receiver) < effectiveRadius) {
+    const baseRadius = receiver.catchRadius || 18;
+    const radius = state.ball.z > 10 ? baseRadius * 1.8 : baseRadius;
+    if (planeDistance(receiver) < radius) {
       completePass(receiver);
       return;
     }
@@ -1440,7 +2021,7 @@ function attemptOffensiveCatch() {
   if (
     !state.ball.carrier &&
     state.ball.flightTime > 0.25 &&
-    planeDistance(qb) < effectiveRadius * 0.7
+    planeDistance(qb) < (state.ball.z > 10 ? 28 : 14)
   ) {
     setBallCarrier(qb);
     state.ball.inFlight = false;
@@ -1785,6 +2366,12 @@ if (signPlayerButton) {
     if (state.homeScreen.busy) {
       return;
     }
+    if (state.homeScreen.selectedProspectId) {
+      if (attemptDraftSelectedProspect()) {
+        return;
+      }
+      return;
+    }
     signRandomPlayer();
   });
 }
@@ -1804,6 +2391,34 @@ if (tradePlayerButton) {
       return;
     }
     tradeSelectedPlayer();
+  });
+}
+
+if (draftRefreshButton) {
+  draftRefreshButton.addEventListener("click", () => {
+    if (state.homeScreen.busy) {
+      return;
+    }
+    refreshDraftBoard("Scouting refreshed the board.");
+  });
+}
+
+if (draftBoardEl) {
+  draftBoardEl.addEventListener("click", (event) => {
+    if (state.homeScreen.busy) {
+      return;
+    }
+    const button = event.target.closest("[data-action='draft']");
+    if (button) {
+      const playerId = button.getAttribute("data-player-id");
+      draftProspect(playerId);
+      return;
+    }
+    const card = event.target.closest(".player-card");
+    if (card) {
+      const playerId = card.getAttribute("data-player-id");
+      selectDraftProspect(playerId);
+    }
   });
 }
 

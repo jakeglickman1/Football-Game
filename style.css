@@ -136,6 +136,7 @@ body {
   justify-content: center;
   padding: 1.5rem;
   z-index: 20;
+  overflow-y: auto;
 }
 
 .home-screen.hidden {
@@ -144,12 +145,14 @@ body {
 
 .home-card {
   width: min(420px, 90vw);
+  max-height: min(640px, 94vh);
   background: rgba(8, 20, 34, 0.95);
   border-radius: 1.2rem;
   padding: 1.75rem;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   text-align: center;
+  overflow-y: auto;
 }
 
 .home-card h2 {
@@ -216,6 +219,58 @@ body {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
+.draft-section {
+  margin-top: 1.2rem;
+  text-align: left;
+}
+
+.draft-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.draft-header h3 {
+  margin: 0;
+  letter-spacing: 0.2rem;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.draft-header .refresh {
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(158, 227, 255, 0.15);
+  color: #e3f7ff;
+  text-transform: uppercase;
+  letter-spacing: 0.12rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.draft-header .refresh:hover {
+  background: rgba(158, 227, 255, 0.3);
+}
+
+.draft-board {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+}
+
+.draft-empty {
+  padding: 0.8rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .home-message {
   margin-top: 1rem;
   min-height: 1.2rem;
@@ -246,36 +301,24 @@ body {
 }
 
 .roster-list {
-  max-height: 220px;
+  max-height: 240px;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.8rem;
-  padding: 0.4rem;
+  padding: 0.45rem;
   background: rgba(0, 0, 0, 0.25);
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.5rem;
 }
 
-.roster-entry {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0.7rem;
-  border-radius: 0.7rem;
+.roster-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 0.7rem;
+  border-radius: 0.6rem;
   background: rgba(255, 255, 255, 0.05);
-  font-size: 0.9rem;
-}
-
-.roster-entry strong {
-  letter-spacing: 0.12rem;
-  font-size: 0.78rem;
-}
-
-.rating-stars {
-  font-size: 0.85rem;
-  color: #ffd369;
-  letter-spacing: 0.1rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .draft-picks {
@@ -283,6 +326,141 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.18rem;
   color: rgba(255, 255, 255, 0.65);
+}
+
+.player-card {
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.65rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.35);
+}
+
+.draft-board .player-card {
+  cursor: pointer;
+}
+
+.draft-card {
+  border-color: rgba(255, 210, 105, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.player-card.selected {
+  border-color: rgba(255, 210, 105, 0.7);
+  box-shadow: 0 0 18px rgba(255, 210, 105, 0.25), inset 0 0 18px rgba(255, 210, 105, 0.18);
+}
+
+.player-card.selected .player-card-media img {
+  border-color: rgba(255, 210, 105, 0.7);
+}
+
+.player-card-media {
+  width: 92px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.player-card-media img {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: #050c14;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.player-card-position,
+.player-card-projection {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  letter-spacing: 0.1rem;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.player-card-position {
+  top: 4px;
+}
+
+.player-card-projection {
+  bottom: 4px;
+}
+
+.player-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.player-card-name {
+  font-weight: 700;
+  letter-spacing: 0.08rem;
+}
+
+.player-card-rating {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #ffd369;
+}
+
+.player-card-rating .stars {
+  font-size: 0.85rem;
+}
+
+.player-card-rating .numeric {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.player-card-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.stat-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.stat-line span {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.stat-line strong {
+  color: #fff;
+}
+
+.draft-card-button {
+  margin-top: auto;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.6rem;
+  border: none;
+  font-size: 0.75rem;
+  letter-spacing: 0.09rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: linear-gradient(120deg, #ffd369, #ff9c63);
+  color: #2a1604;
+}
+
+.draft-card-button:disabled {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
 }
 
 .management-panel {
