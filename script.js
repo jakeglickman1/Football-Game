@@ -28,6 +28,7 @@ const draftRefreshButton = document.getElementById("draft-refresh-button");
 const signPlayerButton = document.getElementById("sign-player");
 const releasePlayerButton = document.getElementById("release-player");
 const tradePlayerButton = document.getElementById("trade-player");
+const popupLayerEl = document.getElementById("popup-layer");
 const cpuDriveIndicator = document.createElement("div");
 cpuDriveIndicator.id = "cpu-drive-indicator";
 cpuDriveIndicator.className = "cpu-drive-indicator";
@@ -368,6 +369,33 @@ function yardsToX(yards) {
 function xToYards(x) {
   const playableWidth = fieldSize.width - FIELD_PADDING * 2;
   return clamp(((x - FIELD_PADDING) / playableWidth) * 100, 0, 100);
+}
+
+function hasBallCarrierCrossedLos() {
+  if (!state.ball.carrier) {
+    return false;
+  }
+  const yards = xToYards(state.ball.carrier.x);
+  return yards >= state.lineOfScrimmage + 0.25;
+}
+
+function defenderShouldStayInCoverage(assigned, carrier, carrierPastLos) {
+  if (!assigned) {
+    return false;
+  }
+  if (!carrier) {
+    return true;
+  }
+  if (state.ball.inFlight) {
+    return true;
+  }
+  if (carrier === state.players.qb && !carrierPastLos) {
+    return true;
+  }
+  if (carrier === assigned && !carrierPastLos) {
+    return true;
+  }
+  return false;
 }
 
 function createPlayer(label, team, role) {
@@ -1587,6 +1615,50 @@ function updateMarkers() {
   firstDownMarkerEl.style.left = `${firstX}px`;
 }
 
+const POPUP_MAX_STACK = 4;
+
+function showPopup(text, options = {}) {
+  if (!popupLayerEl) {
+    return;
+  }
+  const { type = "info", duration = 1900 } = options;
+  const popup = document.createElement("div");
+  popup.className = `popup ${type}`;
+  popup.textContent = text;
+  popupLayerEl.appendChild(popup);
+  requestAnimationFrame(() => {
+    popup.classList.add("visible");
+  });
+  setTimeout(() => {
+    popup.classList.remove("visible");
+    popup.classList.add("exiting");
+    setTimeout(() => popup.remove(), 250);
+  }, duration);
+  while (popupLayerEl.childElementCount > POPUP_MAX_STACK) {
+    popupLayerEl.removeChild(popupLayerEl.firstElementChild);
+  }
+}
+
+function showDownDistancePopup() {
+  const yardsToGo = Math.max(1, Math.round(state.nextFirstDown - state.ballOn));
+  showPopup(`${formatDown(state.down)} & ${yardsToGo} · Ball ${Math.round(state.ballOn)}`, {
+    type: "info",
+    duration: 1500,
+  });
+}
+
+function showYardagePopup(yards) {
+  const rounded = Math.round(yards);
+  if (rounded === 0) {
+    showPopup("No gain", { type: "info", duration: 1500 });
+    return;
+  }
+  const type = rounded > 0 ? "success" : "warning";
+  const absVal = Math.abs(rounded);
+  const label = rounded > 0 ? `Gain of ${absVal}` : `Loss of ${absVal}`;
+  showPopup(`${label} yds`, { type, duration: 1800 });
+}
+
 function setMessage(text) {
   messageEl.textContent = text;
 }
@@ -1694,6 +1766,7 @@ function startPlay() {
     )} · Press Space to snap`
   );
   updateHud();
+  showDownDistancePopup();
 }
 
 function snapBall() {
@@ -1913,21 +1986,22 @@ function updateTrenchBattles(dt) {
 }
 
 function updateDefenders(dt) {
+  const carrier = state.ball.carrier;
+  const carrierPastLos = hasBallCarrierCrossedLos();
   state.players.defenders.forEach((defender) => {
     let targetX = defender.x;
     let targetY = defender.y;
     const assigned = defender.assignment;
-    const qb = state.players.qb;
-    const coverPhase = !state.ball.carrier || state.ball.carrier === qb || state.ball.inFlight;
-    if (assigned && (coverPhase || state.ball.carrier === assigned)) {
+    const stayInCoverage = defenderShouldStayInCoverage(assigned, carrier, carrierPastLos);
+    if (stayInCoverage) {
       const leadPoint = assigned.routePhase === 0 ? assigned.breakPoint : assigned.goPoint;
       const mix = assigned.routePhase === 0 ? 0.35 : 0.2;
       const cushion = assigned.role === "TE" ? 10 : 14;
       targetX = assigned.x * (1 - mix) + leadPoint.x * mix - cushion;
       targetY = assigned.y * (1 - mix) + leadPoint.y * mix;
-    } else if (state.ball.carrier) {
-      targetX = state.ball.carrier.x;
-      targetY = state.ball.carrier.y;
+    } else if (carrier) {
+      targetX = carrier.x;
+      targetY = carrier.y;
     } else if (assigned) {
       const anchorY = fieldSize.height * defender.lane;
       targetX = assigned.x - 12;
@@ -2105,6 +2179,8 @@ function endPlay(outcome, yardLine) {
   updatePowerMeter(0);
   hideRoutePreview();
   const yard = clamp(yardLine, 0, 100);
+  const previousLine = state.lineOfScrimmage;
+  const yardsGained = yard - previousLine;
 
   if (outcome === "touchdown") {
     state.offenseScore += 7;
@@ -2164,17 +2240,20 @@ function endPlay(outcome, yardLine) {
       return;
     }
     setMessage("Incomplete. Back to the huddle.");
+    showPopup("Incomplete", { type: "warning", duration: 1400 });
     updateHud();
     setTimeout(startPlay, 900);
     return;
   }
 
   state.ballOn = yard;
+  showYardagePopup(yardsGained);
   if (state.ballOn >= state.nextFirstDown) {
     state.lineOfScrimmage = state.ballOn;
     state.nextFirstDown = Math.min(100, state.ballOn + 10);
     state.down = 1;
     setMessage("Move the chains! First down.");
+    showPopup("First down!", { type: "success", duration: 1600 });
   } else {
     state.lineOfScrimmage = state.ballOn;
     state.down += 1;
