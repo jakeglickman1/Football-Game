@@ -1460,7 +1460,10 @@ function tradeSelectedPlayer() {
   const picks = ensureDraftPicks(franchise);
   picks[round] = (picks[round] || 0) + 1;
   updateRosterUI();
-  setHomeScreenMessage(`Traded ${removed.name} for a round ${round} pick.`);
+  renderDraftBoard();
+  setHomeScreenMessage(
+    `Traded ${removed.name} for a round ${round} pick. Draft another player of similar value when ready.`
+  );
 }
 
 function pickNextOpponent() {
