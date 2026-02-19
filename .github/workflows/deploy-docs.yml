@@ -1,4 +1,4 @@
-name: Deploy docs to GitHub Pages
+name: Deploy presentation to GitHub Pages
 
 on:
   push:
@@ -25,13 +25,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Build presentation artifact
+        run: |
+          rm -rf presentation-dist
+          mkdir -p presentation-dist/assets
+          cp presentation.html presentation-dist/presentation.html
+          for file in assets/presentation-*.png; do
+            [ -e "$file" ] || continue
+            cp "$file" presentation-dist/assets/
+          done
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload docs artifact
+      - name: Upload presentation artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: presentation-dist
 
       - name: Deploy to GitHub Pages
         id: deployment
