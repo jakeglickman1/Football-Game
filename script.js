@@ -379,6 +379,20 @@ function hasBallCarrierCrossedLos() {
   return yards >= state.lineOfScrimmage + 0.25;
 }
 
+function isQbPastLineOfScrimmage() {
+  const qb = state.players?.qb;
+  if (!qb) {
+    return false;
+  }
+  const qbYards = xToYards(qb.x);
+  return qbYards >= state.lineOfScrimmage + 0.25;
+}
+
+function showIllegalForwardPassWarning() {
+  setMessage("Illegal forward pass: QB crossed the line of scrimmage.");
+  showPopup("Illegal forward pass", { type: "warning", duration: 2000 });
+}
+
 function defenderShouldStayInCoverage(assigned, carrier, carrierPastLos) {
   if (!assigned) {
     return false;
@@ -1842,11 +1856,16 @@ function canStartThrow() {
     state.playActive &&
     !state.ball.inFlight &&
     state.ball.carrier === state.players.qb &&
-    !state.chargingThrow
+    !state.chargingThrow &&
+    !isQbPastLineOfScrimmage()
   );
 }
 
 function startChargingThrow() {
+  if (isQbPastLineOfScrimmage()) {
+    showIllegalForwardPassWarning();
+    return;
+  }
   if (!canStartThrow()) {
     return;
   }
@@ -1858,6 +1877,13 @@ function startChargingThrow() {
 
 function releaseThrow() {
   if (!state.chargingThrow) {
+    return;
+  }
+  if (isQbPastLineOfScrimmage()) {
+    state.chargingThrow = false;
+    state.throwCharge = 0;
+    updatePowerMeter(0);
+    showIllegalForwardPassWarning();
     return;
   }
   const charge = clamp(state.throwCharge, 0, 1);
@@ -1872,6 +1898,10 @@ function attemptPass(powerRatio = 0.5) {
     state.ball.inFlight ||
     state.ball.carrier !== state.players.qb
   ) {
+    return;
+  }
+  if (isQbPastLineOfScrimmage()) {
+    showIllegalForwardPassWarning();
     return;
   }
   hideRoutePreview();
